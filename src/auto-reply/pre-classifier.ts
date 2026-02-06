@@ -68,11 +68,21 @@ export async function callPreClassifier(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        message: ctx.rawBody,
-        sender: ctx.senderId,
+        message: ctx.RawBody || ctx.Body || "",
+        sender: ctx.From || "unknown",
         channel: ctx.channel,
-        sessionKey: ctx.sessionKey,
+        sessionKey: ctx.SessionKey || "",
         timestamp: Date.now(),
+        // Thread context for better classification
+        threadContext: {
+          replyToBody: ctx.ReplyToBody,
+          replyToSender: ctx.ReplyToSender,
+          threadStarterBody: ctx.ThreadStarterBody,
+          threadLabel: ctx.ThreadLabel,
+          replyToId: ctx.ReplyToId,
+        },
+        // Also pass hasImage flag
+        hasImage: !!(ctx.MediaPath || ctx.MediaPaths?.length),
       }),
       signal: controller.signal,
     });
