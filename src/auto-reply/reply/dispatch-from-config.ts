@@ -13,6 +13,7 @@ import {
 } from "../../logging/diagnostic.js";
 import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
 import { maybeApplyTtsToPayload, normalizeTtsAutoMode, resolveTtsConfig } from "../../tts/tts.js";
+import { callPreClassifier, shouldSkipLLM, getSimpleResponse } from "../pre-classifier.js";
 import { getReplyFromConfig } from "../reply.js";
 import { formatAbortReplyText, tryFastAbortFromMessage } from "./abort.js";
 import { shouldSkipDuplicateInbound } from "./inbound-dedupe.js";
@@ -143,6 +144,26 @@ export async function dispatchReplyFromConfig(params: {
   if (shouldSkipDuplicateInbound(ctx)) {
     recordProcessed("skipped", { reason: "duplicate" });
     return { queuedFinal: false, counts: dispatcher.getQueuedCounts() };
+  }
+
+  // === PRE-CLASSIFIER HOOK ===
+  // Call local classifier before expensive LLM call
+  const classifierResult = await callPreClassifier(ctx, cfg);
+  if (classifierResult) {
+    if (classifierResult.action === "STOP") {
+      console.log(`[pre-classifier] STOP action - dropping message`);
+      recordProcessed("skipped", { reason: "pre-classifier-stop" });
+      return { queuedFinal: false, counts: dispatcher.getQueuedCounts() };
+    }
+    if (classifierResult.action === "SIMPLE") {
+      console.log(`[pre-classifier] SIMPLE action - sending: "${classifierResult.text}"`);
+      const simpleResponse = getSimpleResponse(classifierResult);
+      await dispatcher.dispatch({ kind: "block", text: simpleResponse });
+      recordProcessed("completed", { reason: "pre-classifier-simple" });
+      return { queuedFinal: true, counts: dispatcher.getQueuedCounts() };
+    }
+    // WAIT/APPEND/PROCESS all continue to LLM
+    console.log(`[pre-classifier] ${classifierResult.action} action - proceeding to LLM`);
   }
 
   const inboundAudio = isInboundAudioContext(ctx);

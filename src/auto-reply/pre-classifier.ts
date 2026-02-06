@@ -1,9 +1,9 @@
 /**
  * Pre-dispatch classifier hook.
- * 
+ *
  * Intercepts messages before they reach the LLM, allowing cheap local
  * classification to filter simple messages and save API costs.
- * 
+ *
  * Configuration:
  *   preClassifier: {
  *     enabled: true,
@@ -18,7 +18,7 @@ export type PreClassifierAction = "PROCESS" | "STOP" | "SIMPLE" | "WAIT" | "APPE
 
 export type PreClassifierResult = {
   action: PreClassifierAction;
-  text?: string;  // Response text for SIMPLE action
+  text?: string; // Response text for SIMPLE action
   reason?: string;
   confidence?: number;
 };
@@ -48,10 +48,13 @@ export async function callPreClassifier(
   ctx: FinalizedMsgContext,
   cfg: OpenClawConfig,
 ): Promise<PreClassifierResult | undefined> {
+  console.log(`[pre-classifier] callPreClassifier called for message from ${ctx.senderId}`);
   const config = getPreClassifierConfig(cfg);
   if (!config) {
+    console.log(`[pre-classifier] No config found, skipping`);
     return undefined;
   }
+  console.log(`[pre-classifier] Config found: ${config.url}`);
 
   const timeoutMs = config.timeoutMs ?? 5000;
   const controller = new AbortController();
@@ -80,8 +83,8 @@ export async function callPreClassifier(
       return undefined;
     }
 
-    const result = await response.json() as PreClassifierResult;
-    
+    const result = (await response.json()) as PreClassifierResult;
+
     // Validate action
     const validActions: PreClassifierAction[] = ["PROCESS", "STOP", "SIMPLE", "WAIT", "APPEND"];
     if (!validActions.includes(result.action)) {
