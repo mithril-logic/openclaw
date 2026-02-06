@@ -597,6 +597,14 @@ export const OpenClawSchema = z
       })
       .strict()
       .optional(),
+    preClassifier: z
+      .object({
+        enabled: z.boolean(),
+        url: z.string(),
+        timeoutMs: z.number().optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict()
   .superRefine((cfg, ctx) => {
