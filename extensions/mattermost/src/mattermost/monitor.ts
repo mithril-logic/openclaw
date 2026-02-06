@@ -248,7 +248,10 @@ function buildMattermostMediaPayload(mediaList: MattermostMediaInfo[]): {
 /**
  * Converts image media files to ImageContent array for passing to the LLM.
  * Only processes media with kind "image" and valid mime types.
+ * Skips images that exceed MAX_IMAGE_BYTES to avoid memory issues with base64 expansion.
  */
+const MAX_IMAGE_BYTES_FOR_LLM = 5 * 1024 * 1024; // 5MB limit before base64 encoding
+
 async function buildMattermostImageContents(
   mediaList: MattermostMediaInfo[],
   logger?: { debug?: (msg: string) => void },
@@ -260,6 +263,13 @@ async function buildMattermostImageContents(
 
   for (const media of imageMediaList) {
     try {
+      const stats = await fs.stat(media.path);
+      if (stats.size > MAX_IMAGE_BYTES_FOR_LLM) {
+        logger?.debug?.(
+          `mattermost: skipping oversized image ${media.path} (${stats.size} bytes > ${MAX_IMAGE_BYTES_FOR_LLM})`,
+        );
+        continue;
+      }
       const buffer = await fs.readFile(media.path);
       const base64 = buffer.toString("base64");
       images.push({
