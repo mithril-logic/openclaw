@@ -79,6 +79,20 @@ export async function getReplyFromConfig(
   let provider = defaultProvider;
   let model = defaultModel;
   let hasResolvedHeartbeatModelOverride = false;
+
+  // Pre-classifier model override (e.g., route greetings to cheaper model)
+  if (opts?.modelOverride) {
+    const overrideRef = resolveModelRefFromString({
+      raw: opts.modelOverride,
+      defaultProvider,
+      aliasIndex,
+    });
+    if (overrideRef) {
+      provider = overrideRef.ref.provider;
+      model = overrideRef.ref.model;
+      console.log(`[model-override] Using ${provider}/${model} from pre-classifier`);
+    }
+  }
   if (opts?.isHeartbeat) {
     // Prefer the resolved per-agent heartbeat model passed from the heartbeat runner,
     // fall back to the global defaults heartbeat model for backward compatibility.

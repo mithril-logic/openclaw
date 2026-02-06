@@ -21,6 +21,7 @@ export type PreClassifierResult = {
   text?: string; // Response text for SIMPLE action
   reason?: string;
   confidence?: number;
+  model?: string; // Model override hint (e.g., "anthropic/claude-haiku")
 };
 
 export type PreClassifierConfig = {

@@ -319,6 +319,7 @@ export async function dispatchReplyFromConfig(params: {
       ctx,
       {
         ...params.replyOptions,
+        modelOverride: classifierResult?.model,
         onToolResult: shouldSendToolSummaries
           ? (payload: ReplyPayload) => {
               const run = async () => {
