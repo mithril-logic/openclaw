@@ -26,6 +26,32 @@ type ImageContent = {
   data: string; // base64 encoded image data
   mimeType: string; // e.g., "image/jpeg", "image/png"
 };
+
+/**
+ * Check if a URL points to a private/local network address.
+ * Used to conditionally allow SSRF for self-hosted Mattermost instances.
+ */
+function isPrivateNetworkUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    // Localhost variants
+    if (host === "localhost" || host === "127.0.0.1" || host === "::1") {
+      return true;
+    }
+    // Private IPv4 ranges: 10.x.x.x, 172.16-31.x.x, 192.168.x.x
+    const ipv4Match = host.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+    if (ipv4Match) {
+      const [, a, b] = ipv4Match.map(Number);
+      if (a === 10) return true;
+      if (a === 172 && b >= 16 && b <= 31) return true;
+      if (a === 192 && b === 168) return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
 import { getMattermostRuntime } from "../runtime.js";
 import { resolveMattermostAccount } from "./accounts.js";
 import {
@@ -357,12 +383,14 @@ export async function monitorMattermostProvider(opts: MonitorMattermostOpts = {}
     const out: MattermostMediaInfo[] = [];
     for (const fileId of ids) {
       try {
+        // Only allow private network SSRF for self-hosted instances (localhost/private IPs)
+        const allowPrivate = isPrivateNetworkUrl(client.apiBaseUrl);
         const fetched = await core.channel.media.fetchRemoteMedia({
           url: `${client.apiBaseUrl}/files/${fileId}`,
           fetchImpl: fetchWithAuth,
           filePathHint: fileId,
           maxBytes: mediaMaxBytes,
-          ssrfPolicy: { allowPrivateNetwork: true }, // Allow local Mattermost server
+          ...(allowPrivate ? { ssrfPolicy: { allowPrivateNetwork: true } } : {}),
         });
         const saved = await core.channel.media.saveMediaBuffer(
           fetched.buffer,
