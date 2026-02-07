@@ -40,6 +40,7 @@ import { enqueueFollowupRun, type FollowupRun, type QueueSettings } from "./queu
 import { createReplyToModeFilterForChannel, resolveReplyToMode } from "./reply-threading.js";
 import { incrementCompactionCount } from "./session-updates.js";
 import { persistSessionUsageUpdate } from "./session-usage.js";
+import { maybePostThinkingToChannel } from "./thinking-channel.js";
 import { createTypingSignaler } from "./typing-mode.js";
 
 const BLOCK_REPLY_SEND_TIMEOUT_MS = 15_000;
@@ -511,6 +512,18 @@ export async function runReplyAgent(params: {
     }
     if (responseUsageLine) {
       finalPayloads = appendUsageLine(finalPayloads, responseUsageLine);
+    }
+
+    // Post thinking blocks to configured channel (fire-and-forget).
+    const thinkingChannelConfig = cfg?.agents?.defaults?.thinkingChannel;
+    if (thinkingChannelConfig) {
+      maybePostThinkingToChannel({
+        config: thinkingChannelConfig,
+        transcriptPath: followupRun.run.sessionFile,
+        sessionKey,
+      }).catch(() => {
+        // Ignore errors - thinking channel is best-effort.
+      });
     }
 
     return finalizeWithFollowup(

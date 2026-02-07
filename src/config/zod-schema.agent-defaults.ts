@@ -115,6 +115,18 @@ export const AgentDefaultsSchema = z
         z.literal("xhigh"),
       ])
       .optional(),
+    /** Channel ID to automatically post thinking blocks after each agent run. */
+    thinkingChannel: z
+      .object({
+        /** The channel provider (e.g., "mattermost", "discord"). */
+        provider: z.string(),
+        /** The channel ID where thinking blocks should be posted. */
+        channelId: z.string(),
+        /** Optional: Account ID for multi-account setups. */
+        accountId: z.string().optional(),
+      })
+      .strict()
+      .optional(),
     verboseDefault: z.union([z.literal("off"), z.literal("on"), z.literal("full")]).optional(),
     elevatedDefault: z
       .union([z.literal("off"), z.literal("on"), z.literal("ask"), z.literal("full")])
