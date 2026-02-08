@@ -115,13 +115,15 @@ export const AgentDefaultsSchema = z
         z.literal("xhigh"),
       ])
       .optional(),
-    /** Channel ID to automatically post thinking blocks after each agent run. */
-    thinkingChannel: z
+    /** Thread-based reasoning: post thinking blocks as thread replies to the trigger message. */
+    reasoning: z
       .object({
+        /** Whether thread reasoning is enabled. */
+        enabled: z.boolean().default(true),
+        /** Reasoning mode — currently only "thread" is supported. */
+        mode: z.literal("thread").default("thread"),
         /** The channel provider (e.g., "mattermost", "discord"). */
         provider: z.string(),
-        /** The channel ID where thinking blocks should be posted. */
-        channelId: z.string(),
         /** Optional: Account ID for multi-account setups. */
         accountId: z.string().optional(),
       })

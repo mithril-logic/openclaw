@@ -49,7 +49,7 @@ export async function callPreClassifier(
   ctx: FinalizedMsgContext,
   cfg: OpenClawConfig,
 ): Promise<PreClassifierResult | undefined> {
-  console.log(`[pre-classifier] callPreClassifier called for message from ${ctx.senderId}`);
+  console.log(`[pre-classifier] callPreClassifier called for message from ${ctx.SenderId}`);
   const config = getPreClassifierConfig(cfg);
   if (!config) {
     console.log(`[pre-classifier] No config found, skipping`);
@@ -70,7 +70,7 @@ export async function callPreClassifier(
       body: JSON.stringify({
         message: ctx.RawBody || ctx.Body || "",
         sender: ctx.From || "unknown",
-        channel: ctx.channel,
+        channel: ctx.Surface ?? ctx.Provider,
         sessionKey: ctx.SessionKey || "",
         timestamp: Date.now(),
         // Thread context for better classification
@@ -118,7 +118,9 @@ export async function callPreClassifier(
  * Check if a pre-classifier result should skip the LLM.
  */
 export function shouldSkipLLM(result: PreClassifierResult | undefined): boolean {
-  if (!result) return false;
+  if (!result) {
+    return false;
+  }
   return result.action === "STOP" || result.action === "SIMPLE";
 }
 

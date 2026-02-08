@@ -11,12 +11,6 @@ import {
   type ReplyDispatcherOptions,
   type ReplyDispatcherWithTypingOptions,
 } from "./reply/reply-dispatcher.js";
-import {
-  callPreClassifier,
-  shouldSkipLLM,
-  getSimpleResponse,
-} from "./pre-classifier.js";
-
 export type DispatchInboundResult = DispatchFromConfigResult;
 
 export async function dispatchInboundMessage(params: {
@@ -27,42 +21,6 @@ export async function dispatchInboundMessage(params: {
   replyResolver?: typeof import("./reply.js").getReplyFromConfig;
 }): Promise<DispatchInboundResult> {
   const finalized = finalizeInboundContext(params.ctx);
-
-  // === PRE-CLASSIFIER HOOK ===
-  // Call local classifier before expensive LLM call
-  const classifierResult = await callPreClassifier(finalized, params.cfg);
-  
-  if (classifierResult) {
-    // STOP: Drop the message silently
-    if (classifierResult.action === "STOP") {
-      console.log(`[pre-classifier] STOP action - dropping message`);
-      return {
-        replied: false,
-        skipped: true,
-        skipReason: "pre-classifier-stop",
-      } as DispatchFromConfigResult;
-    }
-
-    // SIMPLE: Send direct response without LLM
-    if (classifierResult.action === "SIMPLE") {
-      const response = getSimpleResponse(classifierResult);
-      console.log(`[pre-classifier] SIMPLE action - sending: "${response}"`);
-      await params.dispatcher.send(response);
-      return {
-        replied: true,
-        skipped: false,
-        preClassified: true,
-      } as DispatchFromConfigResult;
-    }
-
-    // WAIT/APPEND: For now, treat as PROCESS (future: implement buffering)
-    if (classifierResult.action === "WAIT" || classifierResult.action === "APPEND") {
-      console.log(`[pre-classifier] ${classifierResult.action} action - proceeding to LLM (buffering not yet implemented)`);
-    }
-
-    // PROCESS: Continue to LLM (default path)
-  }
-  // === END PRE-CLASSIFIER HOOK ===
 
   return await dispatchReplyFromConfig({
     ctx: finalized,

@@ -40,7 +40,7 @@ import { enqueueFollowupRun, type FollowupRun, type QueueSettings } from "./queu
 import { createReplyToModeFilterForChannel, resolveReplyToMode } from "./reply-threading.js";
 import { incrementCompactionCount } from "./session-updates.js";
 import { persistSessionUsageUpdate } from "./session-usage.js";
-import { maybePostThinkingToChannel } from "./thinking-channel.js";
+import { maybePostThinkingToThread } from "./thread-reasoning.js";
 import { createTypingSignaler } from "./typing-mode.js";
 
 const BLOCK_REPLY_SEND_TIMEOUT_MS = 15_000;
@@ -514,15 +514,21 @@ export async function runReplyAgent(params: {
       finalPayloads = appendUsageLine(finalPayloads, responseUsageLine);
     }
 
-    // Post thinking blocks to configured channel (fire-and-forget).
-    const thinkingChannelConfig = cfg?.agents?.defaults?.thinkingChannel;
-    if (thinkingChannelConfig) {
-      maybePostThinkingToChannel({
-        config: thinkingChannelConfig,
+    // Post thinking blocks as thread reply to trigger message (fire-and-forget).
+    const reasoningConfig = cfg?.agents?.defaults?.reasoning;
+    if (reasoningConfig) {
+      const triggerMessageId = sessionCtx.MessageSid ?? sessionCtx.MessageSidLast;
+      const triggerChannelId = sessionCtx.To ?? sessionCtx.From;
+      maybePostThinkingToThread({
+        config: reasoningConfig,
         transcriptPath: followupRun.run.sessionFile,
         sessionKey,
+        threadContext:
+          triggerMessageId && triggerChannelId
+            ? { channelId: triggerChannelId, messageId: triggerMessageId }
+            : undefined,
       }).catch(() => {
-        // Ignore errors - thinking channel is best-effort.
+        // Ignore errors - thread reasoning is best-effort.
       });
     }
 

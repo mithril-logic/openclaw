@@ -241,6 +241,13 @@ export type AgentDefaultsConfig = {
     /** Auto-prune sandbox containers. */
     prune?: SandboxPruneSettings;
   };
+  /** Post thinking/reasoning blocks to a channel or thread. */
+  reasoning?: {
+    enabled: boolean;
+    mode: "thread";
+    provider: string;
+    accountId?: string;
+  };
 };
 
 export type AgentCompactionMode = "default" | "safeguard";

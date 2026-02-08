@@ -158,7 +158,7 @@ export async function dispatchReplyFromConfig(params: {
     if (classifierResult.action === "SIMPLE") {
       console.log(`[pre-classifier] SIMPLE action - sending: "${classifierResult.text}"`);
       const simpleResponse = getSimpleResponse(classifierResult);
-      await dispatcher.dispatch({ kind: "block", text: simpleResponse });
+      dispatcher.sendFinalReply({ text: simpleResponse });
       recordProcessed("completed", { reason: "pre-classifier-simple" });
       return { queuedFinal: true, counts: dispatcher.getQueuedCounts() };
     }
